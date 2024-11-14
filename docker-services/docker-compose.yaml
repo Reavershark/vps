@@ -1,0 +1,123 @@
+services:
+  ##
+  # Backbone
+  ##
+  ddns-updater:
+    image: docker.io/qmcgaw/ddns-updater:v2
+    restart: unless-stopped
+    volumes:
+      - ./volumes/ddns-updater/data/:/updater/data/
+
+  https-portal:
+    image: docker.io/steveltn/https-portal:1
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./volumes/https-portal/data/:/var/lib/https-portal/
+    environment:
+      STAGE: "production"
+      WEBSOCKET: "true"
+      CUSTOM_NGINX_SERVER_CONFIG_BLOCK: |
+        client_max_body_size 64G;
+      DOMAINS: >
+        jnms.me             -> http://landing-page:80,
+        jnms.user.zeus.gent -> http://landing-page:80,
+        files.jnms.me             -> http://fileserver:80,
+        files.jnms.user.zeus.gent -> http://fileserver:80,
+        ${SYNCTHING_USER}:${SYNCTHING_PASS}@syncthing.jnms.me -> http://syncthing:8384,
+        home-theater.jnms.me -> http://home-theater-portal,
+        cyberchef.jnms.me -> http://cyberchef:8000,
+        d-status.jnms.me -> http://d-status:80,
+        sitewatch.jnms.me -> http://sitewatch:5000,
+        temp.jnms.me -> http://172.17.0.1:8000,
+  ##
+  # End of Backbone
+  ##
+
+  ##
+  # Main
+  ##
+  landing-page: # http on port 80
+    build: ./build/landing-page/
+
+  fileserver: # http on port 80
+    image: docker.io/samip537/fancyindex-darktheme
+    restart: unless-stopped
+    volumes:
+      - ./volumes/fileserver/share/:/share/
+    environment:
+      CONTAINER_TIMEZONE: "Europe/Brussels"
+      DISABLE_AUTH: "true"
+    stop_signal: SIGKILL
+
+  syncthing: # http on port 8384
+    image: docker.io/syncthing/syncthing:latest
+    restart: unless-stopped
+    ports:
+      - "22000:22000"
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+    volumes:
+      - ./volumes/syncthing/data/:/var/syncthing/
+  ##
+  # End of Main
+  ##
+
+  ##
+  # Home theater
+  ##
+  home-theater-portal: # http on port 80
+    build:
+      context: ./build/home-theater-portal/
+      args:
+        HOME_THEATER_PASSWORD: ${HOME_THEATER_PASSWORD}
+    restart: unless-stopped
+    volumes:
+      - ./volumes/home-theater-portal/addon-repository/:/volumes/addon-repository/
+      - ./volumes/home-theater-portal/install-guides/:/volumes/install-guides/
+
+  home-theater-recent-dl: # http on port 80
+    image: docker.io/hometheater/service_recent-dl:v0.0.6-amd64
+    restart: unless-stopped
+    volumes:
+      - ./volumes/home-theater-recent-dl/cache/:/app/cache/
+    environment:
+      API_KEY: "${HOME_THEATER_RECENT_DL_API_KEY}"
+  ##
+  # End of Home theater
+  ##
+
+  ##
+  # Misc
+  ##
+  cyberchef: # http on port 8000
+    image: docker.io/mpepping/cyberchef:latest
+    restart: unless-stopped
+
+  sitewatch: # http on port 5000
+    image: docker.io/dgtlmoon/changedetection.io:latest
+    restart: unless-stopped
+    volumes:
+      - ./volumes/sitewatch/datastore/:/datastore/
+
+  d-status: # http on port 80
+    image: docker.io/jmeeuws/d-status:v0.1.0
+    restart: unless-stopped
+  ##
+  # End of Misc
+  ##
+
+  ##
+  # Unused
+  ##
+  #updog: # http on port 80
+  #  build: ./build/updog/
+  #  restart: unless-stopped
+  #  volumes: 
+  #    - ./volumes/updog/files/:/files/ 
+  ##
+  # End of Unused
+  ##
