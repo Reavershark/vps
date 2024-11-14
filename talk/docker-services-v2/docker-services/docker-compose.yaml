@@ -1,0 +1,58 @@
+services:
+  ddns-updater:
+    image: qmcgaw/ddns-updater
+    restart: always
+    user: "0"
+    volumes:
+      - ./volumes/ddns-updater/data/:/updater/data/
+
+  https-portal:
+    image: steveltn/https-portal:1
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./volumes/https-portal/data/:/var/lib/https-portal/
+    environment:
+      STAGE: "production"
+      WEBSOCKET: "true"
+      CUSTOM_NGINX_SERVER_CONFIG_BLOCK: |
+        client_max_body_size 64G;
+      DOMAINS: >
+        jnms.me -> http://landing-page:80,
+        files.jnms.me -> http://fileserver:80,
+        zeus:zeusisdemax@upload.jnms.me -> http://updog:80,
+        cyberchef.jnms.me -> http://cyberchef:8000,
+        sitewatch.jnms.me -> http://sitewatch:5000,
+
+  landing-page: # http on port 80
+    image: nginx:mainline-alpine
+    volumes:
+      - ./volumes/landing-page/webroot/:/usr/share/nginx/html/
+
+  fileserver: # http on port 80
+    image: samip537/fancyindex-darktheme
+    restart: "always"
+    volumes:
+      - ./volumes/fileserver/share/:/share/
+    environment:
+      - CONTAINER_TIMEZONE=Europe/Brussels
+      - DISABLE_AUTH=true
+    stop_signal: SIGKILL
+
+  updog: # http on port 80
+    build: ./build/updog/
+    restart: always
+    volumes: 
+      - ./volumes/updog/files/:/files/ 
+
+  cyberchef: # http on port 8000
+    image: mpepping/cyberchef
+    restart: always
+
+  sitewatch: # http on port 5000
+    image: dgtlmoon/changedetection.io
+    restart: always
+    volumes:
+      - ./volumes/sitewatch/datastore/:/datastore/

@@ -1,0 +1,13 @@
+{
+  "settings": [
+    {
+      "provider": "cloudflare",
+      "zone_identifier": "...",
+      "domain": "jnms.me",
+      "host": "@",
+      "ttl": 600,
+      "token": "...",
+      "ip_version": "ipv4"
+    }
+  ]
+}

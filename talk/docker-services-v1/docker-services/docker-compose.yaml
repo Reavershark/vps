@@ -1,0 +1,5 @@
+services:
+  simpele-website:
+    image: nginx
+    ports:
+      - 80:80
